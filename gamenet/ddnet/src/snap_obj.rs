@@ -1468,9 +1468,9 @@ impl DdnetCharacter {
             jumped_total: in_range(_p.read_int()?, -1, 255)?,
             ninja_activation_tick: crate::snap_obj::Tick(_p.read_int()?),
             freeze_start: crate::snap_obj::Tick(_p.read_int()?),
-            target_x: _p.read_int()?,
-            target_y: _p.read_int()?,
-            tune_zone_override: in_range(_p.read_int()?, -1, 255)?,
+            target_x: _p.read_int().unwrap_or(0),
+            target_y: _p.read_int().unwrap_or(1),
+            tune_zone_override: in_range(_p.read_int().unwrap_or(-1), -1, 255)?,
         })
     }
     pub fn encode(&self) -> &[i32] {
