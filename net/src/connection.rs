@@ -669,6 +669,10 @@ impl Connection {
             _ => return Ok(()),
         };
         self.send.set(cb, Duration::from_millis(500));
+        // send connect twice, similar to ddnet logic
+        if matches!(control, ControlPacket::Connect) {
+            let _ = self.send_control(cb, control);
+        }
         self.send_control(cb, control)
     }
     /// Notifies the connection of incoming data.
