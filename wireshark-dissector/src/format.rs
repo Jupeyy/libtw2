@@ -1,4 +1,3 @@
-use arrayvec::Array;
 use arrayvec::ArrayString;
 use std::fmt;
 use std::mem;
@@ -20,7 +19,7 @@ impl<'a> Bitfield<'a> {
 
 impl<'a> fmt::Display for Bitfield<'a> {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let mut result: ArrayString<[u8; 256]> = ArrayString::new();
+        let mut result: ArrayString<256> = ArrayString::new();
         for (i, &b) in self.bytes.iter().enumerate() {
             if i != 0 {
                 result.push_str(" ");
@@ -43,13 +42,13 @@ impl<'a> fmt::Display for Bitfield<'a> {
     }
 }
 
-pub struct CommaSeparated<A: Array<Item = u8> + Copy> {
+pub struct CommaSeparated<const N: usize> {
     empty: bool,
-    string: ArrayString<A>,
+    string: ArrayString<N>,
 }
 
-impl<A: Array<Item = u8> + Copy> CommaSeparated<A> {
-    pub fn new() -> CommaSeparated<A> {
+impl<const N: usize> CommaSeparated<N> {
+    pub fn new() -> CommaSeparated<N> {
         CommaSeparated {
             empty: true,
             string: ArrayString::new(),

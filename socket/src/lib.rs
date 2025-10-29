@@ -9,9 +9,9 @@ use itertools::Itertools;
 use libtw2_common::unwrap_or_return;
 use libtw2_net::net::Callback;
 use libtw2_net::Timestamp;
-use log::LogLevel;
+use log::Level;
 use mio::net::UdpSocket;
-use mio::Ready;
+use mio::Interest;
 use mio::Token;
 use net2::UdpBuilder;
 use rand::thread_rng;
@@ -44,7 +44,7 @@ impl fmt::Display for Direction {
     }
 }
 
-fn hexdump(level: LogLevel, data: &[u8]) {
+fn hexdump(level: Level, data: &[u8]) {
     if log_enabled!(level) {
         hexdump_iter(data).foreach(|s| log!(level, "{}", s));
     }
@@ -52,7 +52,7 @@ fn hexdump(level: LogLevel, data: &[u8]) {
 
 fn dump(dir: Direction, addr: Addr, data: &[u8]) {
     debug!("{} {}", dir, addr);
-    hexdump(LogLevel::Debug, data);
+    hexdump(Level::Debug, data);
 }
 
 #[derive(Clone, Copy, Eq, Hash, Ord, PartialEq, PartialOrd)]
@@ -138,7 +138,9 @@ fn udp_socket(bindaddr: &SocketAddr) -> io::Result<Option<UdpSocket>> {
     if let SocketAddr::V6(..) = *bindaddr {
         builder.only_v6(true)?;
     }
-    Ok(Some(UdpSocket::from_socket(builder.bind(bindaddr)?)?))
+    let std_socket = builder.bind(bindaddr)?;
+    std_socket.set_nonblocking(true)?;
+    Ok(Some(UdpSocket::from_std(std_socket)))
 }
 
 fn non_block<T>(res: io::Result<T>) -> Option<io::Result<T>> {
@@ -166,16 +168,11 @@ impl Socket {
         let port = port.unwrap_or(0);
         assert!(0.0 <= loss_rate && loss_rate <= 1.0);
 
-        fn register(poll: &mut mio::Poll, token: usize, socket: &UdpSocket) -> io::Result<()> {
-            use mio::PollOpt;
-            poll.register(socket, Token(token), Ready::readable(), PollOpt::level())
-        }
-
         let addr_v4 = IpAddr::V4(Ipv4Addr::new(0, 0, 0, 0));
         let addr_v6 = IpAddr::V6(Ipv6Addr::new(0, 0, 0, 0, 0, 0, 0, 0));
 
-        let v4 = udp_socket(&SocketAddr::new(addr_v4, port))?;
-        let v6 = udp_socket(&SocketAddr::new(addr_v6, port))?;
+        let mut v4 = udp_socket(&SocketAddr::new(addr_v4, port))?;
+        let mut v6 = udp_socket(&SocketAddr::new(addr_v6, port))?;
 
         if v4.is_none() && v6.is_none() {
             return Err(io::Error::new(
@@ -185,12 +182,14 @@ impl Socket {
         }
 
         let mut poll = mio::Poll::new()?;
-        v4.as_ref()
-            .map(|v4| register(&mut poll, 4, &v4))
-            .unwrap_or(Ok(()))?;
-        v6.as_ref()
-            .map(|v6| register(&mut poll, 6, &v6))
-            .unwrap_or(Ok(()))?;
+        if let Some(ref mut v4_socket) = v4 {
+            poll.registry()
+                .register(v4_socket, Token(4), Interest::READABLE)?;
+        }
+        if let Some(ref mut v6_socket) = v6 {
+            poll.registry()
+                .register(v6_socket, Token(6), Interest::READABLE)?;
+        }
         Ok(Socket {
             start: Instant::now(),
             time_cached: Timestamp::from_secs_since_epoch(0),
@@ -252,7 +251,7 @@ impl Socket {
         // ```
         // on loss-free networks.
         for ev in &self.events {
-            assert!(ev.readiness() == Ready::readable());
+            assert!(ev.is_readable());
             match ev.token() {
                 Token(4) => self.check_v4 = true,
                 Token(6) => self.check_v6 = true,
@@ -292,7 +291,7 @@ impl Callback<Addr> for Socket {
                 AddressFamilyNotSupported(()),
             ));
         }
-        non_block(socket.send_to(data, &sock_addr))
+        non_block(socket.send_to(data, sock_addr))
             .unwrap_or_else(|| {
                 Err(io::Error::new(
                     io::ErrorKind::WouldBlock,

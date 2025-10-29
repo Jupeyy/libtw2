@@ -10,7 +10,7 @@ use libtw2_net::collections::PeerSet;
 use libtw2_net::net::Callback;
 use libtw2_net::Net;
 use libtw2_socket::Socket;
-use log::LogLevel;
+use log::Level;
 use std::cmp;
 use std::fmt;
 
@@ -56,7 +56,7 @@ pub struct SocketLoop {
     socket: Socket,
     net: Net<Addr>,
     want_to_flush: PeerSet,
-    disconnected: Takeable<PeerMap<ArrayVec<[u8; 1024]>>>,
+    disconnected: Takeable<PeerMap<ArrayVec<u8, 1024>>>,
     server: bool,
 }
 
@@ -80,8 +80,8 @@ impl Loop for SocketLoop {
         }
     }
     fn run<A: Application<SocketLoop>>(mut self, mut application: A) {
-        let mut buf1: ArrayVec<[u8; 4096]> = ArrayVec::new();
-        let mut buf2: ArrayVec<[u8; 4096]> = ArrayVec::new();
+        let mut buf1: ArrayVec<u8, 4096> = ArrayVec::new();
+        let mut buf2: ArrayVec<u8, 4096> = ArrayVec::new();
 
         loop {
             self.net
@@ -108,7 +108,7 @@ impl Loop for SocketLoop {
 
             while let Some(res) = {
                 buf1.clear();
-                self.socket.receive(&mut buf1)
+                self.socket.receive(buf1.as_mut())
             } {
                 let (addr, data) = res.unwrap();
                 buf2.clear();
@@ -117,7 +117,7 @@ impl Loop for SocketLoop {
                     &mut Warn(addr, data),
                     addr,
                     data,
-                    &mut buf2,
+                    buf2.as_mut(),
                 );
                 res.unwrap();
                 for mut chunk in iter {
@@ -187,7 +187,7 @@ impl Loop for SocketLoop {
     }
 }
 
-fn hexdump(level: LogLevel, data: &[u8]) {
+fn hexdump(level: Level, data: &[u8]) {
     if log_enabled!(level) {
         hexdump_iter(data).foreach(|s| log!(level, "{}", s));
     }
@@ -198,6 +198,6 @@ struct Warn<'a>(Addr, &'a [u8]);
 impl<'a, W: fmt::Debug> warn::Warn<W> for Warn<'a> {
     fn warn(&mut self, w: W) {
         warn!("{}: {:?}", self.0, w);
-        hexdump(LogLevel::Warn, self.1);
+        hexdump(Level::Warn, self.1);
     }
 }

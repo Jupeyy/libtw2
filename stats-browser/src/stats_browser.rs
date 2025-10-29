@@ -120,7 +120,10 @@ impl<'a> StatsBrowser<'a> {
 
             work_queue: work_queue,
             socket: socket,
-            rng: StdRng::from_entropy(),
+            rng: {
+                let mut seeder = rand::rng();
+                StdRng::from_rng(&mut seeder)
+            },
             cb: cb,
         })
     }

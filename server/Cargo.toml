@@ -7,8 +7,8 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-arrayvec = "0.5.2"
-hexdump = "0.1.1"
+arrayvec = "0.7.6"
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
 libtw2-common = { path = "../common/" }
 libtw2-datafile = { path = "../datafile/" }
@@ -20,6 +20,6 @@ libtw2-packer = { path = "../packer/" }
 libtw2-snapshot = { path = "../snapshot/" }
 libtw2-socket = { path = "../socket/" }
 libtw2-world = { path = "../world/" }
-log = "0.3.1"
-ndarray = "0.9.1"
+log = "0.4.28"
+ndarray = "0.15.6"
 warn = ">=0.1.1,<0.3.0"

@@ -6,8 +6,7 @@ use libtw2_common::bytes::FromBytesExt;
 use libtw2_serverbrowse::protocol::PartialServerInfo;
 use libtw2_serverbrowse::protocol::ServerInfo;
 use libtw2_serverbrowse::protocol::Token7;
-use rand::distributions;
-use rand::distributions::Distribution;
+use rand::distr::{self, Distribution, StandardUniform};
 use std::collections::HashSet;
 use std::fmt;
 use zerocopy::byteorder::big_endian;
@@ -71,7 +70,7 @@ impl MasterServerEntry {
 #[derive(Clone)]
 pub struct ServerEntry {
     /// Tokens with missing responses since the last successful info request.
-    pub missing_resp: ArrayVec<[Token; 16]>,
+    pub missing_resp: ArrayVec<Token, 16>,
     /// Total number of malformed responses from this server.
     pub num_malformed_resp: u32,
     /// Total number of responses with invalid token from this server.
@@ -156,7 +155,7 @@ impl Token {
 }
 
 /// Draws a token from a uniform distribution.
-impl Distribution<Token> for distributions::Standard {
+impl Distribution<Token> for StandardUniform {
     fn sample<R: rand::Rng + ?Sized>(&self, rng: &mut R) -> Token {
         let v: u32 = rng.gen();
         Token::from_u32(v)

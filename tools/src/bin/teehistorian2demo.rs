@@ -37,10 +37,10 @@ const TICKS_PER_SECOND: i32 = 50;
 const GAMEINFO_CURVERSION: i32 = 8;
 
 struct Info {
-    name: ArrayVec<[u8; 4 * 4 - 1]>,
-    clan: ArrayVec<[u8; 3 * 4 - 1]>,
+    name: ArrayVec<u8, { 4 * 4 - 1 }>,
+    clan: ArrayVec<u8, { 3 * 4 - 1 }>,
     country: i32,
-    skin: ArrayVec<[u8; 6 * 4 - 1]>,
+    skin: ArrayVec<u8, { 6 * 4 - 1 }>,
     use_custom_color: bool,
     color_body: i32,
     color_feet: i32,
@@ -353,24 +353,24 @@ fn process(in_: &Path, out: &Path) -> Result<(), String> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian to demo converter")
+    let matches = Command::new("Teehistorian to demo converter")
         .about("Converts teehistorian data to a demo file.")
         .arg(
-            Arg::with_name("TEEHISTORIAN")
+            Arg::new("TEEHISTORIAN")
                 .help("Sets the input teehistorian file")
                 .required(true),
         )
-        .arg(Arg::with_name("DEMO").help("Sets the output demo file"))
+        .arg(Arg::new("DEMO").help("Sets the output demo file"))
         .get_matches();
 
     let mut buffer;
-    let in_ = Path::new(matches.value_of_os("TEEHISTORIAN").unwrap());
-    let out = match matches.value_of_os("DEMO").map(Path::new) {
+    let in_ = Path::new(matches.get_one::<OsString>("TEEHISTORIAN").unwrap());
+    let out = match matches.get_one::<OsString>("DEMO").map(Path::new) {
         Some(o) => o,
         None => {
             buffer = OsString::from(in_);

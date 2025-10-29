@@ -9,21 +9,21 @@ fn process(path: &Path) -> Result<(), Box<dyn Error>> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("Gamenet spec reader")
+    let matches = Command::new("Gamenet spec reader")
         .about("Reads a gamenet spec file and does nothing with it.")
         .arg(
-            Arg::with_name("SPEC")
+            Arg::new("SPEC")
                 .help("Sets the gamenet spec file to read")
                 .required(true),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of_os("SPEC").unwrap());
+    let path = Path::new(matches.get_one::<std::ffi::OsString>("SPEC").unwrap());
 
     match process(path) {
         Ok(()) => {}

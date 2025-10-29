@@ -15,22 +15,30 @@ use std::io;
 
 fn main() {
     let mut un = Unhexdump::new();
-    let mut buf: ArrayVec<[u8; 4096]> = ArrayVec::new();
+    let mut buf: ArrayVec<u8, 4096> = ArrayVec::new();
     let stdin = io::stdin();
     let mut stdin = stdin.lock();
 
-    while {
-        buf.clear();
-        stdin.read_buffer(&mut buf).unwrap().len() != 0
-    } {
+    loop {
+        buf.extend(std::iter::repeat(0u8).take(buf.capacity() - buf.len()));
+        let read = stdin.read_buffer(buf.as_mut_slice()).unwrap();
+        let len = read.len();
+        if len == 0 {
+            break;
+        }
+        buf.truncate(len);
         un.feed(&buf).unwrap();
+        buf.clear();
     }
+
+    buf.clear();
 
     let bytes = un.into_inner().unwrap();
 
     println!("packet");
     hexdump(&bytes);
-    let p = match Packet::read(&mut Stdout, &bytes, None, &mut buf) {
+    buf.extend(std::iter::repeat(0u8).take(buf.capacity() - buf.len()));
+    let p = match Packet::read(&mut Stdout, &bytes, None, buf.as_mut_slice()) {
         Err(e) => {
             println!("ERROR: {:?}", e);
             return;

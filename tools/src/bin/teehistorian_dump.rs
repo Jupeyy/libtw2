@@ -64,30 +64,30 @@ fn process(path: &Path, json: bool) -> Result<(), Error> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian reader")
+    let matches = Command::new("Teehistorian reader")
         .about(
             "Reads teehistorian file and dumps its contents in a human-readable\
                 text stream",
         )
         .arg(
-            Arg::with_name("TEEHISTORIAN")
+            Arg::new("TEEHISTORIAN")
                 .help("Sets the teehistorian file to dump")
                 .required(true),
         )
         .arg(
-            Arg::with_name("json")
+            Arg::new("json")
                 .long("json")
                 .help("Output machine-readable JSON"),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of_os("TEEHISTORIAN").unwrap());
-    let json = matches.is_present("json");
+    let path = Path::new(matches.get_one::<std::ffi::OsString>("TEEHISTORIAN").unwrap());
+    let json = matches.get_flag("json");
 
     match process(path, json) {
         Ok(()) => {}

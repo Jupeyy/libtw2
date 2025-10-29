@@ -76,7 +76,7 @@ pub fn int_from_string(bytes: &[u8]) -> Result<i32, InvalidIntString> {
         .unwrap_or(Err(InvalidIntString))
 }
 
-pub fn string_from_int(int: i32) -> ArrayVec<[u8; 16]> {
+pub fn string_from_int(int: i32) -> ArrayVec<u8, 16> {
     let mut result = ArrayVec::new();
     write!(&mut result, "{}", int).unwrap();
     result

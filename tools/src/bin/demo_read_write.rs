@@ -1,5 +1,4 @@
-use clap::App;
-use clap::Arg;
+use clap::{Arg, ArgAction, Command};
 use libtw2_demo::ddnet;
 use libtw2_gamenet_ddnet::Protocol as DDNet;
 use std::error::Error;
@@ -10,36 +9,37 @@ use std::process;
 
 fn main() {
     libtw2_logger::init();
-    let matches = App::new("Teehistorian reader")
+    let matches = Command::new("Teehistorian reader")
         .about(
             "Reads teehistorian file and dumps its contents in a human-readable\
                 text stream",
         )
         .arg(
-            Arg::with_name("INPUT_DEMO")
+            Arg::new("INPUT_DEMO")
                 .help("Sets the demo file to read")
                 .required(true),
         )
         .arg(
-            Arg::with_name("OUTPUT_DEMO")
+            Arg::new("OUTPUT_DEMO")
                 .help("Sets the path to write to")
                 .required(true),
         )
         .arg(
-            Arg::with_name("DDNET")
+            Arg::new("DDNET")
                 .long("ddnet")
+                .action(ArgAction::SetTrue)
                 .help("Interpret the demo as a DDNet demo"),
         )
         .get_matches();
 
-    let input = matches.value_of("INPUT_DEMO").unwrap();
-    let output = matches.value_of("OUTPUT_DEMO").unwrap();
-    let as_ddnet = matches.is_present("DDNET");
+    let input = matches.get_one::<String>("INPUT_DEMO").unwrap();
+    let output = matches.get_one::<String>("OUTPUT_DEMO").unwrap();
+    let as_ddnet = matches.get_flag("DDNET");
     let rewrite = match as_ddnet {
         true => ddnet_read_write,
         false => read_write,
     };
-    if let Err(err) = rewrite(input, output) {
+    if let Err(err) = rewrite(input.as_str(), output.as_str()) {
         println!("Error: {}", err);
         process::exit(-1);
     }

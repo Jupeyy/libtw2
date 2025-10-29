@@ -17,14 +17,14 @@ fn non_block<T>(res: io::Result<T>) -> io::Result<Option<T>> {
 impl UdpSocket {
     /// Opens a UDP socket.
     pub fn open() -> SockResult<UdpSocket> {
-        MioUdpSocket::bind(&"[::]:0".parse().unwrap())
+        MioUdpSocket::bind("[::]:0".parse().unwrap())
             .map(|s| UdpSocket(s))
             .map_err(|e| SockError(e))
     }
     /// Sends a UDP packet to the specified address. Non-blocking.
     pub fn send_to(&mut self, buf: &[u8], dst: Addr) -> SockResult<NonBlock<()>> {
         let &mut UdpSocket(ref mut std_sock) = self;
-        match non_block(std_sock.send_to(buf, &dst.to_socket_addr())) {
+        match non_block(std_sock.send_to(buf, dst.to_socket_addr())) {
             Ok(Some(len)) => {
                 assert!(len == buf.len(), "short send: {} out of {}", len, buf.len());
                 Ok(Ok(()))

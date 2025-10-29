@@ -9,5 +9,5 @@ rust-version = "1.63.0"
 [dependencies]
 libtw2-common = { path = "../common/" }
 libtw2-datafile = { path = "../datafile/" }
-ndarray = "0.9.1"
-zerocopy = "0.7.32"
+ndarray = "0.15.6"
+zerocopy = "0.8.27"

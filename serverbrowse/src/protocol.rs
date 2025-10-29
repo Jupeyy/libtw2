@@ -14,10 +14,8 @@ use std::str;
 use warn::Ignore;
 use zerocopy::byteorder::big_endian;
 use zerocopy::byteorder::little_endian;
-use zerocopy::FromZeroes;
-use zerocopy_derive::AsBytes;
-use zerocopy_derive::FromBytes;
-use zerocopy_derive::FromZeroes;
+use zerocopy::FromZeros;
+use zerocopy_derive::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 const PLAYER_MAX_NAME_LENGTH: usize = 16 - 1;
 const PLAYER_MAX_CLAN_LENGTH: usize = 12 - 1;
@@ -176,7 +174,7 @@ fn request_info(header: Header, challenge: u8) -> [u8; 15] {
     request
 }
 
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 #[repr(transparent)]
 pub struct Token7(pub [u8; 4]);
 
@@ -198,8 +196,8 @@ impl fmt::Display for Token7 {
 
 #[derive(Clone, Default, Eq, Hash, Ord, PartialEq, PartialOrd)]
 pub struct ClientInfo {
-    pub name: ArrayString<[u8; PLAYER_MAX_NAME_LENGTH]>,
-    pub clan: ArrayString<[u8; PLAYER_MAX_CLAN_LENGTH]>,
+    pub name: ArrayString<PLAYER_MAX_NAME_LENGTH>,
+    pub clan: ArrayString<PLAYER_MAX_CLAN_LENGTH>,
     pub country: i32,
     pub score: i32,
     pub flags: i32,
@@ -311,13 +309,13 @@ impl Default for ServerInfoVersion {
 pub struct ServerInfo {
     pub info_version: ServerInfoVersion,
     pub token: i32,
-    pub version: ArrayString<[u8; 32]>,
-    pub name: ArrayString<[u8; 64]>,
-    pub hostname: Option<ArrayString<[u8; 64]>>,
-    pub map: ArrayString<[u8; 32]>,
+    pub version: ArrayString<32>,
+    pub name: ArrayString<64>,
+    pub hostname: Option<ArrayString<64>>,
+    pub map: ArrayString<32>,
     pub map_crc: Option<u32>,
     pub map_size: Option<u32>,
-    pub game_type: ArrayString<[u8; 32]>,
+    pub game_type: ArrayString<32>,
     pub flags: i32,
     pub progression: Option<i32>,
     pub skill_level: Option<i32>,
@@ -543,7 +541,7 @@ where
             offset = unwrap_or_return!(raw_offset.try_u32(), fail("offset sanity check"));
         }
         if version.has_extra_info() {
-            let _: ArrayString<[u8; 0]> = str!("extra_info");
+            let _: ArrayString<0> = str!("extra_info");
         }
 
         if version == ServerInfoVersion::V6Ex {
@@ -581,7 +579,7 @@ where
                 flags = 0;
             }
             if version.has_extra_info() {
-                let _: ArrayString<[u8; 0]> = str!("extra_info");
+                let _: ArrayString<0> = str!("extra_info");
             }
             if version == ServerInfoVersion::V664 {
                 if j > MAX_CLIENTS_6_64 {

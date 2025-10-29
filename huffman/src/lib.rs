@@ -204,7 +204,7 @@ impl Huffman {
         Huffman::from_frequencies_array(array)
     }
     pub fn from_frequencies_array(frequencies: &[u32; 256]) -> Huffman {
-        let mut frequencies: ArrayVec<[_; 512]> = frequencies
+        let mut frequencies: ArrayVec<_, 512> = frequencies
             .iter()
             .cloned()
             .enumerate()
@@ -218,7 +218,7 @@ impl Huffman {
             node_idx: EOF,
         });
 
-        let mut nodes: ArrayVec<[_; 1024]> = (0..NUM_SYMBOLS).map(|_| NODE_SENTINEL).collect();
+        let mut nodes: ArrayVec<_, 1024> = (0..NUM_SYMBOLS).map(|_| NODE_SENTINEL).collect();
 
         while frequencies.len() > 1 {
             // Sort in reverse (upper to lower)!
@@ -244,7 +244,7 @@ impl Huffman {
 
         // We use a `top` variable as virtual extension of `stack` in order to
         // have less `unwrap`s.
-        let mut stack: ArrayVec<[u16; 24]> = ArrayVec::new();
+        let mut stack: ArrayVec<u16, 24> = ArrayVec::new();
         let mut top = ROOT_IDX;
 
         let mut bits = 0;

@@ -10,6 +10,7 @@ use libtw2_serverbrowse::protocol::Response;
 use serde_derive::Deserialize;
 use std::collections::btree_map;
 use std::collections::BTreeMap;
+use std::io::Write as _;
 use std::net::IpAddr;
 use std::net::Ipv4Addr;
 use std::net::SocketAddr;
@@ -60,13 +61,13 @@ pub fn on_packet(data: &[u8]) {
 pub fn register_server_6(port: u16) {
     static INIT: Once = Once::new();
     INIT.call_once(|| {
-        let mut logger = env_logger::LogBuilder::new();
-        logger.filter(None, log::LogLevelFilter::Info);
+        let mut logger = env_logger::Builder::new();
+        logger.filter(None, log::LevelFilter::Info);
         if let Some(filters) = &config().log {
-            logger.parse(&filters);
+            logger.parse_filters(&filters);
         }
-        logger.format(|record| {
-            use log::LogLevel::*;
+        logger.format(|buf, record| {
+            use log::Level::*;
             let level = match record.level() {
                 Error => 'E',
                 Warn => 'W',
@@ -74,7 +75,8 @@ pub fn register_server_6(port: u16) {
                 Debug => 'D',
                 Trace => 'T',
             };
-            format!(
+            writeln!(
+                buf,
                 "                    {} {}: {}",
                 level,
                 record.metadata().target(),

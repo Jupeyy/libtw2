@@ -118,7 +118,7 @@ impl State {
 struct ResendChunk {
     next_send: Timeout,
     sequence: Sequence,
-    data: ArrayVec<[u8; 2048]>,
+    data: ArrayVec<u8, 2048>,
 }
 
 impl ResendChunk {
@@ -353,7 +353,7 @@ impl OnlineState {
 #[derive(Clone, Debug, Eq, PartialEq)]
 struct PacketContents {
     num_chunks: u8,
-    data: ArrayVec<[u8; 2048]>,
+    data: ArrayVec<u8, 2048>,
 }
 
 impl PacketContents {
@@ -364,7 +364,7 @@ impl PacketContents {
         }
     }
     fn write_chunk(&mut self, data: &[u8], vital: Option<(u16, bool)>) {
-        protocol::write_chunk(data, vital, &mut self.data).unwrap();
+        protocol::write_chunk(data, vital, self.data.as_mut()).unwrap();
         self.num_chunks += 1;
     }
     fn can_fit_chunk(&self, data: &[u8], vital: bool) -> bool {

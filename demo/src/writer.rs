@@ -36,8 +36,8 @@ pub struct Writer<'a> {
     file: Box<dyn SeekableWrite + 'a>,
     header: Header,
     prev_tick: Option<i32>,
-    huffman: ArrayVec<[u8; MAX_SNAPSHOT_SIZE]>,
-    buffer2: ArrayVec<[u8; MAX_SNAPSHOT_SIZE]>,
+    huffman: ArrayVec<u8, MAX_SNAPSHOT_SIZE>,
+    buffer2: ArrayVec<u8, MAX_SNAPSHOT_SIZE>,
 }
 
 const WRITER_VERSION: Version = Version::V5;
@@ -118,7 +118,7 @@ impl<'a> Writer<'a> {
         let data = data.unwrap_or(&self.buffer2);
         self.huffman.clear();
         HUFFMAN
-            .compress(data, &mut self.huffman)
+            .compress(data, self.huffman.as_mut())
             .expect("too long compression");
         ChunkHeader::Data {
             kind,
@@ -139,7 +139,7 @@ impl<'a> Writer<'a> {
     pub fn write_message(&mut self, msg: &[u8]) -> Result<(), WriteError> {
         self.buffer2.clear();
         with_packer(
-            &mut self.buffer2,
+            self.buffer2.as_mut(),
             |mut p| -> Result<(), buffer::CapacityError> {
                 for b in msg.chunks(4) {
                     // Get or return 0.

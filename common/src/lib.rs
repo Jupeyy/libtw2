@@ -5,6 +5,8 @@ pub use self::takeable::Takeable;
 
 #[macro_use]
 mod macros;
+#[macro_use]
+mod clap_compat;
 
 pub mod bytes;
 pub mod digest;

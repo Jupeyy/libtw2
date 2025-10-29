@@ -7,12 +7,12 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-arrayvec = "0.5.2"
-hexdump = "0.1.1"
+arrayvec = "0.7.6"
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
 libtw2-common = { path = "../common/" }
 libtw2-logger = { path = "../logger/" }
 libtw2-net = { path = "../net/" }
 libtw2-socket = { path = "../socket/" }
-log = "0.3.1"
+log = "0.4.28"
 warn = ">=0.1.1,<0.3.0"

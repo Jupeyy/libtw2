@@ -1,4 +1,3 @@
-use itertools::sorted;
 use libtw2_teehistorian::format;
 use libtw2_teehistorian::Buffer;
 use libtw2_teehistorian::Reader;
@@ -109,37 +108,38 @@ fn handle_args(dirs: Vec<PathBuf>, config: &Config) -> Result<(), ()> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
+    use std::ffi::OsString;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian indexer")
+    let matches = Command::new("Teehistorian indexer")
         .about(
             "Checks folders of teehistorian files for solo maps with \
                 non-solo flexreset files",
         )
         .arg(
-            Arg::with_name("DIRECTORY")
+            Arg::new("DIRECTORY")
                 .help("Directories to scan (current directory if none are given)")
-                .multiple(true),
+                .num_args(0..),
         )
-        .arg(Arg::with_name("ignore-ext").long("--ignore-ext").help(
+        .arg(Arg::new("ignore-ext").long("ignore-ext").help(
             "Don't check for the .teehistorian file extension before \
                    checking a file",
         ))
         .get_matches();
 
-    let paths = matches.values_of_os("DIRECTORY");
+    let paths = matches.get_many::<OsString>("DIRECTORY");
     let config = Config {
-        ignore_ext: matches.is_present("ignore-ext"),
+        ignore_ext: matches.get_flag("ignore-ext"),
     };
 
-    let dirs = if let Some(p) = paths {
-        sorted(p.into_iter().map(|p| PathBuf::from(p)))
-    } else {
-        vec![PathBuf::from(".")]
+    let mut dirs: Vec<PathBuf> = match paths {
+        Some(p) => p.into_iter().map(PathBuf::from).collect(),
+        None => vec![PathBuf::from(".")],
     };
+    dirs.sort();
 
     if handle_args(dirs, &config).is_err() {
         process::exit(1);

@@ -1,6 +1,5 @@
 use chrono::DateTime;
 use chrono::FixedOffset;
-use itertools::sorted;
 use itertools::Itertools;
 use libtw2_teehistorian::format;
 use libtw2_teehistorian::Buffer;
@@ -252,45 +251,46 @@ fn handle_args(
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
+    use std::ffi::OsString;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian indexer")
+    let matches = Command::new("Teehistorian indexer")
         .about(
             "Indexes folders of teehistorian files and dumps the index into \
                 a CSV file",
         )
         .arg(
-            Arg::with_name("base")
-                .short("b")
+            Arg::new("base")
+                .short('b')
                 .long("base")
                 .value_name("BASE")
                 .help("Sets a base index file"),
         )
         .arg(
-            Arg::with_name("inplace")
-                .short("i")
+            Arg::new("inplace")
+                .short('i')
                 .long("in-place")
                 .value_name("INDEX")
                 .help("Sets the index file to update")
                 .conflicts_with("base"),
         )
         .arg(
-            Arg::with_name("DIRECTORY")
+            Arg::new("DIRECTORY")
                 .help("Directories to scan (current directory if none are given)")
-                .multiple(true),
+                .num_args(0..),
         )
-        .arg(Arg::with_name("ignore-ext").long("--ignore-ext").help(
+        .arg(Arg::new("ignore-ext").long("ignore-ext").help(
             "Don't check for the .teehistorian file extension before \
                    indexing a file",
         ))
         .get_matches();
 
-    let paths = matches.values_of_os("DIRECTORY");
-    let base = matches.value_of_os("base");
-    let inplace = matches.value_of_os("inplace");
+    let paths = matches.get_many::<OsString>("DIRECTORY");
+    let base = matches.get_one::<OsString>("base");
+    let inplace = matches.get_one::<OsString>("inplace");
     let (input, output) = match (base, inplace) {
         (None, None) => (None, None),
         (Some(b), None) => (Some(Path::new(b)), None),
@@ -298,14 +298,14 @@ fn main() {
         (Some(_), Some(_)) => unreachable!(),
     };
     let config = Config {
-        ignore_ext: matches.is_present("ignore-ext"),
+        ignore_ext: matches.get_flag("ignore-ext"),
     };
 
-    let dirs = if let Some(p) = paths {
-        sorted(p.into_iter().map(|p| PathBuf::from(p)))
-    } else {
-        vec![PathBuf::from(".")]
+    let mut dirs: Vec<PathBuf> = match paths {
+        Some(p) => p.into_iter().map(PathBuf::from).collect(),
+        None => vec![PathBuf::from(".")],
     };
+    dirs.sort();
 
     if handle_args(input, output, dirs, &config).is_err() {
         process::exit(1);

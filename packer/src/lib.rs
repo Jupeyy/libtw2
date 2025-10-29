@@ -92,7 +92,7 @@ fn to_bit(b: bool, bit: u32) -> u8 {
 
 fn write_int<E, F: FnMut(&[u8]) -> Result<(), E>>(int: i32, f: F) -> Result<(), E> {
     let mut f = f;
-    let mut buf: ArrayVec<[u8; 5]> = ArrayVec::new();
+    let mut buf: ArrayVec<u8, 5> = ArrayVec::new();
     let sign = if int < 0 { 1 } else { 0 };
     let mut int = (int ^ -sign) as u32;
     let next = (int & 0b0011_1111) as u8;
@@ -428,11 +428,16 @@ mod test {
         assert!(unpacker.as_slice().is_empty());
         assert_eq!(vec, warnings);
 
-        let mut buf: ArrayVec<[u8; 5]> = ArrayVec::new();
-        let written = with_packer(&mut buf, |mut p| {
-            p.write_int(int).unwrap();
-            p.written()
-        });
+        let mut buf: ArrayVec<u8, 5> = ArrayVec::new();
+        buf.resize(buf.capacity(), 0);
+        let len = {
+            with_packer(buf.as_mut_slice(), |mut p| {
+                p.write_int(int).unwrap();
+                p.written().len()
+            })
+        };
+        buf.truncate(len);
+        let written = &buf[..];
         if warnings.is_empty() {
             assert_eq!(written, bytes);
         } else {
@@ -501,11 +506,16 @@ mod test {
 
     quickcheck! {
         fn int_roundtrip(int: i32) -> bool {
-            let mut buf: ArrayVec<[u8; 5]> = ArrayVec::new();
-            let mut unpacker = Unpacker::new(with_packer(&mut buf, |mut p| {
-                p.write_int(int).unwrap();
-                p.written()
-            }));
+            let mut buf: ArrayVec<u8, 5> = ArrayVec::new();
+            buf.resize(buf.capacity(), 0);
+            let len = {
+                with_packer(buf.as_mut_slice(), |mut p| {
+                    p.write_int(int).unwrap();
+                    p.written().len()
+                })
+            };
+            buf.truncate(len);
+            let mut unpacker = Unpacker::new(&buf[..]);
             let read_int = unpacker.read_int(&mut Panic).unwrap();
             int == read_int && unpacker.as_slice().is_empty()
         }

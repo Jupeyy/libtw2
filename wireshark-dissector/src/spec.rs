@@ -351,7 +351,7 @@ impl Spec {
         p: &mut Unpacker<'a>,
         summary: &mut dyn FnMut(&str),
     ) {
-        let mut buffer: ArrayVec<[u8; 1024]> = ArrayVec::new();
+        let mut buffer: ArrayVec<u8, 1024> = ArrayVec::new();
         let mut buffer2 = Vec::new();
         macro_rules! bformat {
             ($fmt:expr, $($args:tt)*) => {
@@ -457,7 +457,7 @@ impl Spec {
         p: &mut Unpacker<'a>,
         summary: &mut dyn FnMut(&str),
     ) {
-        let mut buffer: ArrayVec<[u8; 1024]> = ArrayVec::new();
+        let mut buffer: ArrayVec<u8, 1024> = ArrayVec::new();
         let mut buffer2 = Vec::new();
         macro_rules! bformat {
             ($fmt:expr, $($args:tt)*) => {{
@@ -824,7 +824,7 @@ impl Type {
         tvb: *mut sys::tvbuff_t,
         p: &mut Unpacker<'a>,
     ) -> Result<(), ()> {
-        let mut buffer: ArrayVec<[u8; 1024]> = ArrayVec::new();
+        let mut buffer: ArrayVec<u8, 1024> = ArrayVec::new();
         let mut buffer2 = Vec::new();
         macro_rules! bformat {
             ($fmt:expr, $($args:tt)*) => {{
@@ -922,7 +922,7 @@ impl Type {
             }
             Flags(i) => {
                 let v = p.read_int(&mut Ignore).map_err(|_| ())? as u32;
-                let mut flag_names: CommaSeparated<[u8; 256]> = CommaSeparated::new();
+                let mut flag_names: CommaSeparated<256> = CommaSeparated::new();
                 for flag in &i.flags.values {
                     if v & flag.value != 0 {
                         flag_names.add(flag.identifier.as_str());

@@ -7,9 +7,9 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-arrayvec = "0.5.2"
-clap = "2.31.2"
-hexdump = "0.1.1"
+arrayvec = "0.7.6"
+clap = { version = "4.5.51", features = ["deprecated", "derive"] }
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
 libtw2-common = { path = "../common/" }
 libtw2-event-loop = { path = "../event-loop/" }
@@ -17,7 +17,7 @@ libtw2-gamenet = { package = "libtw2-gamenet-teeworlds-0-6", path = "../gamenet/
 libtw2-logger = { path = "../logger/" }
 libtw2-packer = { path = "../packer/" }
 libtw2-snapshot = { path = "../snapshot/" }
-log = "0.3.1"
-rand = "0.8.3"
-tempfile = "3.0.0"
+log = "0.4.28"
+rand = "0.9.2"
+tempfile = "3.23.0"
 warn = ">=0.1.1,<0.3.0"

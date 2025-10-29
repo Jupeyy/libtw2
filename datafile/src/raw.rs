@@ -389,7 +389,7 @@ impl Reader {
     }
 
     pub fn debug_dump(&self, cb: &mut dyn CallbackReadData) -> Result<(), Error> {
-        if !log_enabled!(log::LogLevel::Debug) {
+        if !log_enabled!(log::Level::Debug) {
             return Ok(());
         }
         debug!("DATAFILE");

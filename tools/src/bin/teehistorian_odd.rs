@@ -18,7 +18,7 @@ use vec_map::VecMap;
 use warn::Ignore;
 
 struct Info {
-    name: ArrayVec<[u8; 4 * 4 - 1]>,
+    name: ArrayVec<u8, { 4 * 4 - 1 }>,
 }
 
 impl<'a> From<game::ClChangeInfo<'a>> for Info {
@@ -121,21 +121,25 @@ fn process(path: &Path) -> Result<(), Error> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian odd input checker")
+    let matches = Command::new("Teehistorian odd input checker")
         .about("Reads teehistorian file and checks for odd inputs")
         .arg(
-            Arg::with_name("TEEHISTORIAN")
+            Arg::new("TEEHISTORIAN")
                 .help("Sets the teehistorian file to search")
                 .required(true),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of_os("TEEHISTORIAN").unwrap());
+    let path = Path::new(
+        matches
+            .get_one::<std::ffi::OsString>("TEEHISTORIAN")
+            .unwrap(),
+    );
 
     match process(path) {
         Ok(()) => {}

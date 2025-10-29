@@ -7,9 +7,9 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-hexdump = "0.1.1"
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
 libtw2-common = { path = "../common/", features = ["file_offset"] }
 libtw2-logger = { path = "../logger/" }
 libtw2-zlib = { package = "libtw2-zlib-minimal", path = "../zlib-minimal/" }
-log = "0.3.0"
+log = "0.4.28"

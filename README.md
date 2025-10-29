@@ -133,3 +133,9 @@ indicate that the libraries or executables might be useful outside of libtw2.
   Zwelf's [TwGame](https://gitlab.com/ddnet-rs/twgame) instead.**
 - [zlib-minimal](zlib-minimal). Minimal wrapper around
   [zlib](https://zlib.net/).
+
+
+cherry-picked:
+08c0666 Send connect twice
+c1e8e82 Don't fail on unknown ddnetcharacter fields sent by server.
+63c556e Fallback to tune's default value on error for new tunes

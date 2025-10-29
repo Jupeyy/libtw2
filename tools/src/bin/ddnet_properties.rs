@@ -204,30 +204,30 @@ fn process(path: &Path, output_path: &Path) -> Result<(), Error> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("DDNet map properties extractor")
+    let matches = Command::new("DDNet map properties extractor")
         .about(
             "Reads a map file and reports width/height of the game layer and\
                 some of its contents, in msgpack format.",
         )
         .arg(
-            Arg::with_name("MAP")
+            Arg::new("MAP")
                 .help("Sets the map file to analyse")
                 .required(true),
         )
         .arg(
-            Arg::with_name("OUTPUT")
+            Arg::new("OUTPUT")
                 .help("Sets the msgpack file to output")
                 .required(true),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of_os("MAP").unwrap());
-    let output_path = Path::new(matches.value_of_os("OUTPUT").unwrap());
+    let path = Path::new(matches.get_one::<std::ffi::OsString>("MAP").unwrap());
+    let output_path = Path::new(matches.get_one::<std::ffi::OsString>("OUTPUT").unwrap());
 
     match process(path, output_path) {
         Ok(()) => {}

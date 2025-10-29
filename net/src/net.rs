@@ -454,15 +454,18 @@ impl<A: Address> Net<A> {
     pub fn accept<CB: Callback<A>>(&mut self, cb: &mut CB, pid: PeerId) -> Result<(), CB::Error> {
         let peer = &mut self.peers[pid];
         assert!(peer.conn.is_unconnected());
-        let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
+        let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
         let connect_packet: &[u8] = if peer.token {
             CONNECT_PACKET
         } else {
             CONNECT_PACKET_NO_TOKEN
         };
-        let (mut none, res) =
-            peer.conn
-                .feed(&mut cc(cb, peer.addr), &mut Panic, connect_packet, &mut buf);
+        let (mut none, res) = peer.conn.feed(
+            &mut cc(cb, peer.addr),
+            &mut Panic,
+            connect_packet,
+            buf.as_mut(),
+        );
         assert!(none.next().is_none());
         res
     }

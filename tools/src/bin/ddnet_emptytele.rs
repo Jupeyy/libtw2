@@ -40,22 +40,23 @@ fn process(path: &Path) -> Result<(), Error> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
+    use std::ffi::OsString;
 
     libtw2_logger::init();
 
-    let matches = App::new("DDNet teleporter scanner")
+    let matches = Command::new("DDNet teleporter scanner")
         .about("Scans map files for weird teleporters.")
         .arg(
-            Arg::with_name("MAP")
+            Arg::new("MAP")
                 .help("Sets the map file to analyse")
-                .multiple(true)
+                .num_args(1..)
                 .required(true),
         )
         .get_matches();
 
-    let maps = matches.values_of_os("MAP").unwrap();
+    let maps = matches.get_many::<OsString>("MAP").unwrap();
 
     let mut error = false;
     for map in maps {

@@ -50,7 +50,7 @@ pub struct Reader<'a> {
     start: format::HeaderStart,
     current_tick: Option<i32>,
     raw: [u8; MAX_SNAPSHOT_SIZE],
-    huffman: ArrayVec<[u8; MAX_SNAPSHOT_SIZE]>,
+    huffman: ArrayVec<u8, MAX_SNAPSHOT_SIZE>,
 }
 
 impl<'a> Reader<'a> {
@@ -157,7 +157,7 @@ impl<'a> Reader<'a> {
                 let raw_data = &mut self.raw[..size.usize()];
                 self.data.read_exact(raw_data)?;
                 self.huffman.clear();
-                HUFFMAN.decompress(raw_data, &mut self.huffman)?;
+                HUFFMAN.decompress(raw_data, self.huffman.as_mut())?;
                 Ok(Some(match kind {
                     DataKind::Unknown => RawChunk::Unknown,
                     DataKind::Snapshot => RawChunk::Snapshot(&self.huffman),

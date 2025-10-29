@@ -6,13 +6,13 @@ license = "MIT/Apache-2.0"
 edition = "2021"
 
 [dependencies]
-arrayvec = "0.5.2"
-binrw = "0.11.1"
+arrayvec = "0.7.6"
+binrw = "0.15.0"
 buffer = "0.1.9"
 libtw2-common = { path = "../common/" }
 libtw2-gamenet-common = { path = "../gamenet/common/" }
 libtw2-huffman = { path = "../huffman/" }
 libtw2-packer = { path = "../packer/" }
 libtw2-snapshot = { path = "../snapshot/" }
-thiserror = "1.0.0"
-warn = "0.2.1"
+thiserror = "2.0.17"
+warn = "0.2.2"

@@ -19,10 +19,10 @@ use warn::Ignore;
 
 #[allow(unused)]
 struct Info {
-    name: ArrayVec<[u8; 4 * 4 - 1]>,
-    clan: ArrayVec<[u8; 3 * 4 - 1]>,
+    name: ArrayVec<u8, { 4 * 4 - 1 }>,
+    clan: ArrayVec<u8, { 3 * 4 - 1 }>,
     country: i32,
-    skin: ArrayVec<[u8; 6 * 4 - 1]>,
+    skin: ArrayVec<u8, { 6 * 4 - 1 }>,
     use_custom_color: bool,
     color_body: i32,
     color_feet: i32,
@@ -188,24 +188,24 @@ fn process(path: &Path) -> Result<(), Error> {
 }
 
 fn main() {
-    use clap::App;
     use clap::Arg;
+    use clap::Command;
 
     libtw2_logger::init();
 
-    let matches = App::new("Teehistorian reader")
+    let matches = Command::new("Teehistorian reader")
         .about(
             "Reads teehistorian file and dumps its contents in a human-readable\
                 text stream",
         )
         .arg(
-            Arg::with_name("TEEHISTORIAN")
+            Arg::new("TEEHISTORIAN")
                 .help("Sets the teehistorian file to dump")
                 .required(true),
         )
         .get_matches();
 
-    let path = Path::new(matches.value_of_os("TEEHISTORIAN").unwrap());
+    let path = Path::new(matches.get_one::<std::ffi::OsString>("TEEHISTORIAN").unwrap());
 
     match process(path) {
         Ok(()) => {}

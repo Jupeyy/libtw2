@@ -59,8 +59,8 @@ pub enum RawChunk<'a> {
         tick: i32,
         keyframe: bool,
     },
-    Snapshot(&'a ArrayVec<[u8; MAX_SNAPSHOT_SIZE]>),
-    SnapshotDelta(&'a ArrayVec<[u8; MAX_SNAPSHOT_SIZE]>),
+    Snapshot(&'a ArrayVec<u8, MAX_SNAPSHOT_SIZE>),
+    SnapshotDelta(&'a ArrayVec<u8, MAX_SNAPSHOT_SIZE>),
     Message(&'a [u8]),
     Unknown,
 }

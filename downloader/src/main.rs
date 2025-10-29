@@ -2,11 +2,7 @@
 extern crate log;
 
 use arrayvec::ArrayVec;
-use clap::values_t;
-use clap::App;
-use clap::Arg;
-use clap::Error;
-use clap::ErrorKind;
+use clap::{Parser, ValueHint};
 use hexdump::hexdump_iter;
 use itertools::Itertools;
 use libtw2_common::num::Cast;
@@ -48,7 +44,7 @@ use libtw2_packer::IntUnpacker;
 use libtw2_packer::Unpacker;
 use libtw2_snapshot::format::Item as SnapItem;
 use libtw2_snapshot::Snap;
-use log::LogLevel;
+use log::Level;
 use std::borrow::Cow;
 use std::cmp;
 use std::collections::HashSet;
@@ -64,7 +60,7 @@ use std::u32;
 use tempfile::NamedTempFile;
 use warn::Log;
 
-fn hexdump(level: LogLevel, data: &[u8]) {
+fn hexdump(level: Level, data: &[u8]) {
     if log_enabled!(level) {
         hexdump_iter(data).foreach(|s| log!(level, "{}", s));
     }
@@ -75,7 +71,7 @@ struct Warn<'a>(&'a [u8]);
 impl<'a, W: fmt::Debug> warn::Warn<W> for Warn<'a> {
     fn warn(&mut self, w: W) {
         warn!("{:?}", w);
-        hexdump(LogLevel::Warn, self.0);
+        hexdump(Level::Warn, self.0);
     }
 }
 
@@ -86,6 +82,52 @@ impl<'a, W: fmt::Debug> warn::Warn<W> for WarnSnap<'a> {
     fn warn(&mut self, w: W) {
         warn!("{:?} for {:?}", w, self.0);
     }
+}
+
+#[derive(Parser, Debug)]
+#[command(
+    name = "Teeworlds server map scraper",
+    about = "Tries to download every map from an otherwise empty Teeworlds server."
+)]
+struct Cli {
+    #[arg(
+        long,
+        value_name = "NICK",
+        default_value = "downloader",
+        value_hint = ValueHint::Other,
+        value_parser = parse_nick
+    )]
+    nick: String,
+    #[arg(
+        long,
+        value_name = "CLAN",
+        default_value = "",
+        value_hint = ValueHint::Other,
+        value_parser = parse_clan
+    )]
+    clan: String,
+    #[arg(
+        value_name = "SERVER",
+        value_hint = ValueHint::Hostname,
+        required = true
+    )]
+    server: Vec<Addr>,
+}
+
+fn enforce_byte_len(label: &str, value: &str, max: usize) -> Result<String, String> {
+    if value.as_bytes().len() > max {
+        Err(format!("{label} can have at most {max} bytes"))
+    } else {
+        Ok(value.to_owned())
+    }
+}
+
+fn parse_nick(value: &str) -> Result<String, String> {
+    enforce_byte_len("Nick", value, 15)
+}
+
+fn parse_clan(value: &str) -> Result<String, String> {
+    enforce_byte_len("Clan", value, 11)
 }
 
 fn check_dummy_map(name: &[u8], crc: u32, size: i32) -> bool {
@@ -305,8 +347,12 @@ impl PeerState {
 trait LoopExt: Loop {
     fn sends<'a, S: Into<System<'a>>>(&mut self, pid: PeerId, msg: S) {
         fn inner<L: Loop + ?Sized>(msg: System, pid: PeerId, loop_: &mut L) {
-            let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
-            with_packer(&mut buf, |p| msg.encode(p).unwrap());
+            let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
+            buf.extend(std::iter::repeat(0u8).take(buf.capacity()));
+            let len = {
+                with_packer(buf.as_mut_slice(), |p| msg.encode(p).unwrap().len())
+            };
+            buf.truncate(len);
             loop_.send(Chunk {
                 pid: pid,
                 vital: true,
@@ -317,8 +363,12 @@ trait LoopExt: Loop {
     }
     fn sendg<'a, G: Into<Game<'a>>>(&mut self, pid: PeerId, msg: G) {
         fn inner<L: Loop + ?Sized>(msg: Game, pid: PeerId, loop_: &mut L) {
-            let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
-            with_packer(&mut buf, |p| msg.encode(p).unwrap());
+            let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
+            buf.extend(std::iter::repeat(0u8).take(buf.capacity()));
+            let len = {
+                with_packer(buf.as_mut_slice(), |p| msg.encode(p).unwrap().len())
+            };
+            buf.truncate(len);
             loop_.send(Chunk {
                 pid: pid,
                 vital: true,
@@ -437,7 +487,7 @@ impl<'a, L: Loop> MainLoop<'a, L> {
             Ok(m) => msg = m,
             Err(err) => {
                 warn!("decode error {:?}:", err);
-                hexdump(LogLevel::Warn, data);
+                hexdump(Level::Warn, data);
                 return;
             }
         }
@@ -740,51 +790,19 @@ impl<'a, L: Loop> MainLoop<'a, L> {
 fn main() {
     libtw2_logger::init();
 
-    let matches = App::new("Teeworlds server map scraper")
-        .about("Tries to download every map from an otherwise empty Teeworlds server.")
-        .arg(
-            Arg::with_name("nick")
-                .help("Sets the nickname sent to servers")
-                .long("nick")
-                .takes_value(true)
-                .value_name("NICK")
-                .default_value("downloader"),
-        )
-        .arg(
-            Arg::with_name("clan")
-                .help("Sets the clan name sent to servers")
-                .long("clan")
-                .takes_value(true)
-                .value_name("CLAN")
-                .default_value(""),
-        )
-        .arg(
-            Arg::with_name("server")
-                .help("Server to scrape")
-                .multiple(true)
-                .required(true)
-                .value_name("SERVER"),
-        )
-        .get_matches();
+    let Cli {
+        nick,
+        clan,
+        server: addresses,
+    } = Cli::parse();
 
-    let addresses = values_t!(matches, "server", Addr).unwrap_or_else(|e| e.exit());
-    let nick = matches.value_of("nick").unwrap();
-    let clan = matches.value_of("clan").unwrap();
-
-    if nick.len() >= 15 {
-        Error::with_description("Nick can have at most 15 bytes", ErrorKind::ValueValidation)
-            .exit();
-    }
-    if clan.len() >= 11 {
-        Error::with_description("Clan can have at most 11 bytes", ErrorKind::ValueValidation)
-            .exit();
-    }
-
+    let timeout = format!("{nick} (timeout)");
+    let error = format!("{nick} (error)");
     let config = Config {
-        nick: nick.to_owned(),
-        clan: clan.to_owned(),
-        timeout: format!("{} (timeout)", nick),
-        error: format!("{} (error", nick),
+        nick,
+        clan,
+        timeout,
+        error,
     };
 
     Main::run::<SocketLoop>(&addresses, config);

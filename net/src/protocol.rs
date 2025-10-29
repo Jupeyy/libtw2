@@ -14,10 +14,8 @@ use std::io::Write as _;
 use std::str;
 use warn::Ignore;
 use warn::Warn;
-use zerocopy::AsBytes as _;
-use zerocopy_derive::AsBytes;
-use zerocopy_derive::FromBytes;
-use zerocopy_derive::FromZeroes;
+use zerocopy::IntoBytes as _;
+use zerocopy_derive::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 pub const CHUNK_HEADER_SIZE: usize = 2;
 pub const CHUNK_HEADER_SIZE_VITAL: usize = 3;
@@ -625,7 +623,7 @@ impl<'a> ConnectedPacket<'a> {
     fn write_impl<'d, 's>(&self, mut buffer: BufferRef<'d, 's>) -> Result<&'d [u8], Error> {
         match self.type_ {
             ConnectedPacketType::Chunks(request_resend, num_chunks, payload) => {
-                let mut token_buffer: ArrayVec<[u8; 2048]> = ArrayVec::new();
+                let mut token_buffer: ArrayVec<u8, 2048> = ArrayVec::new();
                 let payload: &[u8] = if let Some(token) = self.token {
                     token_buffer.write(payload).unwrap();
                     token_buffer.write(&token.0).unwrap();
@@ -633,9 +631,9 @@ impl<'a> ConnectedPacket<'a> {
                 } else {
                     payload
                 };
-                let mut compression_buffer: ArrayVec<[u8; 2048]> = ArrayVec::new();
+                let mut compression_buffer: ArrayVec<u8, 2048> = ArrayVec::new();
                 let mut compression = 0;
-                let comp_result = HUFFMAN.compress(payload, &mut compression_buffer);
+                let comp_result = HUFFMAN.compress(payload, compression_buffer.as_mut());
                 if comp_result
                     .map(|s| s.len() < payload.len())
                     .unwrap_or(false)
@@ -714,7 +712,7 @@ impl<'a> ControlPacket<'a> {
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct PacketHeaderPacked {
     flags_padding_ack: u8, // u4 u2 u2
     ack: u8,
@@ -781,14 +779,14 @@ pub struct ChunkHeaderVital {
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct ChunkHeaderPacked {
     flags_size: u8,   // u2 u6
     padding_size: u8, // u4 u4
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct ChunkHeaderVitalPacked {
     flags_size: u8,    // u2 u6
     sequence_size: u8, // u4 u4
@@ -924,7 +922,7 @@ mod test {
     use warn::Ignore;
     use warn::Panic;
     use warn::Warn;
-    use zerocopy::AsBytes as _;
+    use zerocopy::IntoBytes as _;
 
     struct WarnVec<'a>(&'a mut Vec<Warning>);
 

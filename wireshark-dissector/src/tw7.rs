@@ -7,6 +7,7 @@ use crate::spec::Spec;
 use crate::Counter;
 use crate::HFRI_DEFAULT;
 use arrayvec::ArrayVec;
+use libtw2_common::bytes::FromBytesExt as _;
 use libtw2_common::num::Cast;
 use libtw2_common::pretty;
 use libtw2_net::protocol7 as protocol;
@@ -59,12 +60,12 @@ static mut HF_CHUNK_HEADER_SEQ: c_int = -1;
 static mut SPEC: Option<Spec> = None;
 
 fn unpack_header(data: &[u8]) -> Option<protocol::PacketHeader> {
-    let raw_header = protocol::PacketHeaderPacked::ref_from_prefix(data)?;
+    let (raw_header, _) = protocol::PacketHeaderPacked::ref_and_rest_from(data)?;
     Some(raw_header.unpack_warn(&mut Ignore))
 }
 
 fn unpack_header_connless(data: &[u8]) -> Option<protocol::PacketHeaderConnless> {
-    let raw_header = protocol::PacketHeaderConnlessPacked::ref_from_prefix(data)?;
+    let (raw_header, _) = protocol::PacketHeaderConnlessPacked::ref_and_rest_from(data)?;
     Some(raw_header.unpack_warn(&mut Ignore))
 }
 
@@ -85,7 +86,7 @@ unsafe extern "C" fn dissect_heur(
 unsafe fn dissect_heur_impl(tvb: *mut sys::tvbuff_t) -> Result<(), ()> {
     let len = sys::tvb_reported_length(tvb).usize();
     let mut original_buffer = Vec::with_capacity(len);
-    let mut decompress_buffer: ArrayVec<[u8; 2048]> = ArrayVec::new();
+    let mut decompress_buffer = Vec::with_capacity(2048);
     original_buffer.set_len(len);
     sys::tvb_memcpy(tvb, original_buffer.as_mut_ptr() as *mut c_void, 0, len);
     let data: &[u8] = &original_buffer;
@@ -135,7 +136,7 @@ unsafe fn dissect_impl(
     let mut tvb = tvb;
     let len = sys::tvb_reported_length(tvb).usize();
     let mut original_buffer = Vec::with_capacity(len);
-    let mut decompress_buffer: ArrayVec<[u8; 2048]> = ArrayVec::new();
+    let mut decompress_buffer = Vec::with_capacity(2048);
     original_buffer.set_len(len);
     sys::tvb_memcpy(tvb, original_buffer.as_mut_ptr() as *mut c_void, 0, len);
     let mut data: &[u8] = &original_buffer;
@@ -143,7 +144,7 @@ unsafe fn dissect_impl(
     // Must be below `let mut tvb = tvb;`
     macro_rules! field {
         ($type:expr, $tree:expr, $hf:expr, $from:expr, $to:expr, $value:expr, $fmt:expr, $($args:tt)*) => {{
-            let mut formatted: ArrayVec<[u8; 256]> = ArrayVec::new();
+            let mut formatted: ArrayVec<u8, 256> = ArrayVec::new();
             write!(formatted, $fmt, $($args)*).unwrap();
             formatted.push(0);
             $type($tree, $hf, tvb, $from, $to, $value, c("%s\0"), CStr::from_bytes_with_nul(&formatted).unwrap().as_ptr())
@@ -151,7 +152,7 @@ unsafe fn dissect_impl(
     }
     macro_rules! field_none {
         ($tree:expr, $hf:expr, $from:expr, $to:expr, $fmt:expr, $($args:tt)*) => {{
-            let mut formatted: ArrayVec<[u8; 256]> = ArrayVec::new();
+            let mut formatted: ArrayVec<u8, 256> = ArrayVec::new();
             write!(formatted, $fmt, $($args)*).unwrap();
             formatted.push(0);
             sys::proto_tree_add_none_format($tree, $hf, tvb, $from, $to, c("%s\0"), CStr::from_bytes_with_nul(&formatted).unwrap().as_ptr())
@@ -203,7 +204,7 @@ unsafe fn dissect_impl(
     let ti = sys::proto_tree_add_item(ttree, PROTO_PACKET, tvb, 0, header_size, sys::ENC_NA);
     let tree = sys::proto_item_add_subtree(ti, ETT_PACKET);
 
-    let mut flags_description: CommaSeparated<[u8; 256]> = CommaSeparated::new();
+    let mut flags_description: CommaSeparated<256> = CommaSeparated::new();
     if connless {
         flags_description.add("connectionless");
     } else {
@@ -393,7 +394,7 @@ unsafe fn dissect_impl(
     }
     tvb = sys::tvb_new_subset_remaining(tvb, header_size);
 
-    let mut buffer: ArrayVec<[u8; 2048]> = ArrayVec::new();
+    let mut buffer = Vec::with_capacity(2048);
     let packet = protocol::Packet::read(&mut Ignore, data, &mut buffer).map_err(|_| ())?;
 
     match packet {
@@ -466,7 +467,7 @@ unsafe fn dissect_impl(
                 } else {
                     continue;
                 };
-                let mut flags_description: CommaSeparated<[u8; 256]> = CommaSeparated::new();
+                let mut flags_description: CommaSeparated<256> = CommaSeparated::new();
                 let resend = header.flags & protocol::CHUNKFLAG_RESEND != 0;
                 let vital = header.flags & protocol::CHUNKFLAG_VITAL != 0;
                 if resend {

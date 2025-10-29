@@ -7,6 +7,7 @@ use libtw2_serverbrowse::protocol::ServerInfo;
 use libtw2_serverbrowse::protocol::ServerInfoVersion;
 use std::cmp::Ordering;
 use std::fmt;
+use std::time::{SystemTime, UNIX_EPOCH};
 
 #[allow(missing_copy_implementations)]
 pub struct Tracker {
@@ -167,7 +168,11 @@ impl StatsBrowserCb for Tracker {
 }
 
 fn print_iter<'a, I: Iterator<Item = &'a (dyn fmt::Display + 'a)>>(command: &str, args: I) {
-    print!("{}\t{}", time::get_time().sec, command);
+    let timestamp = SystemTime::now()
+        .duration_since(UNIX_EPOCH)
+        .unwrap_or_default()
+        .as_secs();
+    print!("{}\t{}", timestamp, command);
     for a in args {
         print!("\t{}", a);
     }

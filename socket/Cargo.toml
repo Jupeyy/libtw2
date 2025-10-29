@@ -8,12 +8,12 @@ rust-version = "1.63.0"
 
 [dependencies]
 buffer = "0.1.9"
-hexdump = "0.1.1"
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
-libc = "0.2.16"
+libc = "0.2.177"
 libtw2-common = { path = "../common/" }
 libtw2-net = { path = "../net/" }
-log = "0.3.1"
-mio = "0.6.6"
-net2 = "0.2.0"
-rand = "0.8.3"
+log = "0.4.28"
+mio = { version = "0.8.11", features = ["net", "os-poll"] }
+net2 = "0.2.39"
+rand = "0.9.2"

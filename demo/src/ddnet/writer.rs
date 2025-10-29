@@ -50,7 +50,7 @@ pub struct DemoWriter<'a, P: for<'p> Protocol<'p>> {
     snap: Snap,
     builder: snap::Builder,
     delta: Delta,
-    buf: arrayvec::ArrayVec<[u8; format::MAX_SNAPSHOT_SIZE]>,
+    buf: arrayvec::ArrayVec<u8, { format::MAX_SNAPSHOT_SIZE }>,
     i32_buf: Vec<i32>,
     protocol: PhantomData<P>,
 }
@@ -120,13 +120,13 @@ impl<'a, P: for<'p> Protocol<'p>> DemoWriter<'a, P> {
         self.inner.write_tick(is_keyframe, tick)?;
         if is_keyframe {
             let keys = &mut self.i32_buf;
-            with_packer(&mut self.buf, |p| new_snap.write(keys, p))
+            with_packer(self.buf.as_mut(), |p| new_snap.write(keys, p))
                 .map_err(|_| WriteError::TooLargeSnap)?;
             self.inner.write_snapshot(&self.buf)?;
         } else {
             self.delta.create(&old_snap, &new_snap);
             let delta = &self.delta;
-            with_packer(&mut self.buf, |p| delta.write(P::obj_size, p))
+            with_packer(self.buf.as_mut(), |p| delta.write(P::obj_size, p))
                 .map_err(|_| WriteError::TooLargeSnap)?;
             self.inner.write_snapshot_delta(&self.buf)?;
         }
@@ -144,7 +144,7 @@ impl<'a, P: for<'p> Protocol<'p>> DemoWriter<'a, P> {
         Ok(())
     }
     pub fn write_msg(&mut self, msg: &<P as Protocol<'_>>::Game) -> Result<(), WriteError> {
-        with_packer(&mut self.buf, |p| msg.encode(p)).map_err(|_| WriteError::TooLongNetMsg)?;
+        with_packer(self.buf.as_mut(), |p| msg.encode(p)).map_err(|_| WriteError::TooLongNetMsg)?;
         self.inner.write_message(self.buf.as_slice())?;
         self.buf.clear();
         Ok(())

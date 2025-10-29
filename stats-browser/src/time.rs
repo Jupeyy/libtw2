@@ -1,7 +1,9 @@
 use libtw2_common::num::Cast;
 use std::ops::Add;
 use std::ops::Sub;
+use std::sync::OnceLock;
 use std::time as std_time;
+use std::time::Instant;
 
 // TODO: What happens on time overflow?
 // TODO: What happens on time backward jump?
@@ -53,7 +55,10 @@ impl Sub<Time> for Time {
 impl Time {
     /// Returns the current `Time`.
     pub fn now() -> Time {
-        Time(time::precise_time_ns() / 1_000_000)
+        static START: OnceLock<Instant> = OnceLock::new();
+        let start = START.get_or_init(Instant::now);
+        let ms = start.elapsed().as_millis();
+        Time(ms.min(u128::from(u64::MAX)) as u64)
     }
 }
 

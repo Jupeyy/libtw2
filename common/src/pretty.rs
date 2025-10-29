@@ -38,7 +38,7 @@ impl<'a> BytesSlice<'a> {
 }
 
 struct Byte {
-    string: ArrayVec<[u8; 4]>,
+    string: ArrayVec<u8, 4>,
 }
 
 impl Byte {

@@ -1,9 +1,6 @@
 #![cfg(not(test))]
 
-use clap::value_t;
-use clap::values_t;
-use clap::App;
-use clap::Arg;
+use clap::{Parser, ValueHint};
 use image::imageops;
 use image::ImageError;
 use image::RgbaImage;
@@ -22,14 +19,15 @@ use std::ffi::OsString;
 use std::fmt;
 use std::io;
 use std::mem;
-use std::path::Path;
+use std::path::{Path, PathBuf};
 use std::process;
 use std::str;
+use std::str::FromStr;
 
 // TODO: Skip empty tiles (i.e. don't count tiles that have index != 0, but are
 //       graphically empty.
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Debug)]
 struct Rect {
     min_x: u32,
     min_y: u32,
@@ -48,6 +46,49 @@ impl Rect {
 
     fn is_empty(&self) -> bool {
         return self.min_y >= self.max_y || self.min_x >= self.max_x;
+    }
+}
+
+impl FromStr for Rect {
+    type Err = String;
+
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        let parts: Vec<_> = s
+            .split(',')
+            .map(str::trim)
+            .filter(|p| !p.is_empty())
+            .collect();
+        if parts.len() != 4 {
+            return Err("crop expects four comma-separated integers".into());
+        }
+        let mut values = [0u32; 4];
+        for (idx, part) in parts.iter().enumerate() {
+            values[idx] = part.parse::<u32>().map_err(|e| {
+                format!(
+                    "invalid integer at position {} in crop specification: {}",
+                    idx + 1,
+                    e
+                )
+            })?;
+        }
+        if values[0] > values[2] {
+            return Err("min_x must be smaller or equal to max_x".into());
+        }
+        if values[1] > values[3] {
+            return Err("min_y must be smaller or equal to max_y".into());
+        }
+        let max_x = values[2]
+            .checked_add(1)
+            .ok_or_else(|| "max_x is too large".to_string())?;
+        let max_y = values[3]
+            .checked_add(1)
+            .ok_or_else(|| "max_y is too large".to_string())?;
+        Ok(Rect {
+            min_x: values[0],
+            min_y: values[1],
+            max_x,
+            max_y,
+        })
     }
 }
 
@@ -604,74 +645,50 @@ fn load_external_image(path: &Path) -> Result<Option<Array2<Color>>, Error> {
     ))
 }
 
+#[derive(Parser, Debug)]
+#[command(
+    name = "Teeworlds map renderer",
+    about = "Reads a Teeworlds map file and renders a PNG thumbnail."
+)]
+struct Cli {
+    #[arg(
+        long,
+        value_name = "SIZE",
+        default_value_t = 200,
+        help = "Sets the approximate area of the thumbnail to size*size pixels"
+    )]
+    size: u32,
+    #[arg(
+        long,
+        help = "Don't render layers marked as \"Detail\" in the map editor"
+    )]
+    no_detail: bool,
+    #[arg(
+        value_name = "MAP",
+        value_hint = ValueHint::FilePath,
+        required = true,
+        help = "Map to render (output file is the same with \".png\" appended)"
+    )]
+    map: Vec<PathBuf>,
+    #[arg(
+        long,
+        value_name = "CROP",
+        help = "Crop to these tile coordinates (min_x,min_y,max_x,max_y)"
+    )]
+    crop: Option<Rect>,
+}
+
 fn main() {
     libtw2_logger::init();
 
-    let matches = App::new("Teeworlds map renderer")
-        .about("Reads a Teeworlds map file and renders a PNG thumbnail.")
-        .arg(
-            Arg::with_name("size")
-                .help("Sets the approximate area of the thumbnail to size*size pixels")
-                .long("size")
-                .takes_value(true)
-                .value_name("SIZE")
-                .default_value("200"),
-        )
-        .arg(
-            Arg::with_name("no-detail")
-                .help("Don't render layers marked as \"Detail\" in the map editor")
-                .long("no-detail"),
-        )
-        .arg(
-            Arg::with_name("map")
-                .help("Map to render (output file is the same with \".png\" appended)")
-                .multiple(true)
-                .required(true)
-                .value_name("MAP"),
-        )
-        .arg(
-            Arg::with_name("crop")
-                .help("Crop to these tile coordinates (min_x,min_y,max_x,max_y)")
-                .long("crop")
-                .use_delimiter(true)
-                .number_of_values(4)
-                .value_name("CROP"),
-        )
-        .get_matches();
-
-    let crop = if !matches.is_present("crop") {
-        None
-    } else {
-        let crop = values_t!(matches, "crop", u32).unwrap_or_else(|e| e.exit());
-        if crop[0] > crop[2] {
-            clap::Error::with_description(
-                "min_x must be smaller or equal to max_x",
-                clap::ErrorKind::ValueValidation,
-            )
-            .exit();
-        }
-        if crop[1] > crop[3] {
-            clap::Error::with_description(
-                "min_y must be smaller or equal to max_y",
-                clap::ErrorKind::ValueValidation,
-            )
-            .exit();
-        }
-        Some(Rect {
-            min_x: crop[0],
-            min_y: crop[1],
-            max_x: crop[2] + 1,
-            max_y: crop[3] + 1,
-        })
-    };
+    let cli = Cli::parse();
 
     let config = Config {
-        size: value_t!(matches, "size", u32).unwrap_or_else(|e| e.exit()),
-        render_detail: !matches.is_present("no-detail"),
-        crop: crop,
+        size: cli.size,
+        render_detail: !cli.no_detail,
+        crop: cli.crop,
     };
 
-    let args = matches.values_of_os("map").unwrap();
     let mut num_args: u64 = 0;
 
     let mut error_stats = ErrorStats::default();
@@ -686,12 +703,12 @@ fn main() {
         }
     };
 
-    for arg in args {
+    for map in &cli.map {
         num_args += 1;
         out_path_buf.clear();
-        out_path_buf.push(&arg);
+        out_path_buf.push(map);
         out_path_buf.push(".png");
-        let path = Path::new(&arg);
+        let path = map.as_path();
         match process(path, Path::new(&out_path_buf), &mut external, &config) {
             Ok(()) => error_stats.ok += 1,
             Err(err) => {

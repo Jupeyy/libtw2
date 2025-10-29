@@ -69,7 +69,7 @@ mod json {
         pub kind: EntryKind,
         pub ping_time: Timestamp,
         #[serde(skip_serializing_if = "Option::is_none")]
-        pub location: Option<ArrayString<[u8; 15]>>,
+        pub location: Option<ArrayString<15>>,
         pub secret: Uuid,
     }
     #[derive(Serialize)]
@@ -82,20 +82,20 @@ mod json {
         pub max_clients: i32,
         pub max_players: i32,
         pub passworded: bool,
-        pub game_type: ArrayString<[u8; 32]>,
-        pub name: ArrayString<[u8; 64]>,
+        pub game_type: ArrayString<32>,
+        pub name: ArrayString<64>,
         pub map: MapInfo,
-        pub version: ArrayString<[u8; 32]>,
+        pub version: ArrayString<32>,
         pub clients: Vec<ClientInfo>,
     }
     #[derive(Serialize)]
     pub struct MapInfo {
-        pub name: ArrayString<[u8; 32]>,
+        pub name: ArrayString<32>,
     }
     #[derive(Serialize)]
     pub struct ClientInfo {
-        pub name: ArrayString<[u8; 15]>,
-        pub clan: ArrayString<[u8; 11]>,
+        pub name: ArrayString<15>,
+        pub clan: ArrayString<11>,
         pub country: i32,
         pub score: i32,
         pub is_player: bool,
@@ -121,7 +121,7 @@ mod json {
         where
             S: serde::Serializer,
         {
-            let mut result: ArrayString<[u8; 64]> = ArrayString::new();
+            let mut result: ArrayString<64> = ArrayString::new();
             result.push_str(match self.protocol {
                 Protocol::V5 => "tw-0.5+udp://",
                 Protocol::V6 => "tw-0.6+udp://",
@@ -196,7 +196,7 @@ impl Timekeeper {
 }
 
 pub struct ServerEntry {
-    location: Option<ArrayString<[u8; 15]>>,
+    location: Option<ArrayString<15>>,
     info: Option<json::ServerInfo>,
     info_version: ServerInfoVersion,
     ping_time: Timestamp,
@@ -241,7 +241,7 @@ impl Tracker {
         };
         thread::spawn(move || tracker_thread.handle_writeout());
     }
-    fn lookup_location(&self, addr: ServerAddr) -> Option<ArrayString<[u8; 15]>> {
+    fn lookup_location(&self, addr: ServerAddr) -> Option<ArrayString<15>> {
         self.locations.as_ref().and_then(|locations| {
             let ip_addr = addr.addr.to_srvbrowse_addr().ip_address;
             let country_code = locations.lookup(ip_addr)?.country_code();

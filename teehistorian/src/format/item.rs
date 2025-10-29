@@ -202,7 +202,7 @@ where
     String::from_utf8_lossy(bytes).serialize(s)
 }
 
-fn serialize_str_slice_lossy<S>(bytess: &ArrayVec<[&[u8]; 16]>, s: S) -> Result<S::Ok, S::Error>
+fn serialize_str_slice_lossy<S>(bytess: &ArrayVec<&[u8], 16>, s: S) -> Result<S::Ok, S::Error>
 where
     S: serde::Serializer,
 {
@@ -322,7 +322,7 @@ pub struct ConsoleCommand<'a> {
     #[serde(serialize_with = "serialize_str_lossy")]
     pub cmd: &'a [u8],
     #[serde(serialize_with = "serialize_str_slice_lossy")]
-    pub args: ArrayVec<[&'a [u8]; CONSOLE_COMMAND_MAX_ARGS]>,
+    pub args: ArrayVec<&'a [u8], CONSOLE_COMMAND_MAX_ARGS>,
 }
 
 #[derive(Clone, Serialize)]

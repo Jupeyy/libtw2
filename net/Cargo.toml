@@ -7,18 +7,18 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-arrayvec = "0.5.2"
+arrayvec = "0.7.6"
 buffer = "0.1.9"
 libtw2-common = { path = "../common/" }
 libtw2-huffman = { path = "../huffman/" }
-linear-map = "1.0.0"
-optional = "0.0.12"
+linear-map = "1.2.0"
+optional = "0.5.0"
 void = ">=0.0.4,<2.0.0"
 warn = ">=0.1.1,<0.3.0"
-zerocopy = "0.7.32"
-zerocopy-derive = "0.7.32"
+zerocopy = "0.8.27"
+zerocopy-derive = "0.8.27"
 
 [dev-dependencies]
-hexdump = "0.1.1"
+hexdump = "0.1.2"
 itertools = ">=0.3.0,<0.5.0"
-quickcheck = "0.4.1"
+quickcheck = "1.0.3"

@@ -11,10 +11,8 @@ use std::cmp;
 use std::fmt;
 use warn::Ignore;
 use warn::Warn;
-use zerocopy::AsBytes;
-use zerocopy_derive::AsBytes;
-use zerocopy_derive::FromBytes;
-use zerocopy_derive::FromZeroes;
+use zerocopy::IntoBytes as ZeroCopyIntoBytes;
+use zerocopy_derive::{FromBytes, Immutable, IntoBytes, KnownLayout};
 
 pub const CHUNK_HEADER_SIZE: usize = 2;
 pub const CHUNK_HEADER_SIZE_VITAL: usize = 3;
@@ -440,7 +438,7 @@ impl<'a> Iterator for ChunksIter<'a> {
 impl<'a> ExactSizeIterator for ChunksIter<'a> {}
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct PacketHeaderPacked {
     padding_flags_ack: u8, // u2 u4 u2
     ack: u8,
@@ -457,7 +455,7 @@ pub struct PacketHeader {
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct PacketHeaderConnlessPacked {
     padding_flags_version: u8, // u2 u4 u2
     token: [u8; 4],
@@ -569,14 +567,14 @@ pub struct ChunkHeaderVital {
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct ChunkHeaderPacked {
     flags_size: u8,   // u2 u6
     padding_size: u8, // u2 u6
 }
 
 #[repr(C, packed)]
-#[derive(AsBytes, Clone, Copy, FromBytes, FromZeroes)]
+#[derive(IntoBytes, Clone, Copy, FromBytes, Immutable, KnownLayout)]
 pub struct ChunkHeaderVitalPacked {
     flags_size: u8,    // u2 u6
     sequence_size: u8, // u2 u6
@@ -717,7 +715,7 @@ mod test {
     use super::Warning;
     use warn::Panic;
     use warn::Warn;
-    use zerocopy::AsBytes as _;
+    use zerocopy::IntoBytes as _;
 
     struct WarnVec<'a>(&'a mut Vec<Warning>);
 

@@ -7,11 +7,11 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-clap = "2.31.2"
-image = { version = "0.24.0", features = ["png", "rayon"], default-features = false }
+clap = { version = "4.5.51", features = ["deprecated", "derive"] }
+image = { version = "0.24.9", features = ["png", "rayon"], default-features = false }
 libtw2-common = { path = "../common/" }
 libtw2-datafile = { path = "../datafile/" }
 libtw2-logger = { path = "../logger/" }
 libtw2-map = { path = "../map/" }
-ndarray = "0.9.1"
-num-traits = "0.1.32"
+ndarray = "0.15.6"
+num-traits = "0.2.19"

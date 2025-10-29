@@ -50,7 +50,7 @@ use libtw2_packer::with_packer;
 use libtw2_packer::Unpacker;
 use libtw2_snapshot::snap;
 use libtw2_world::vec2;
-use log::LogLevel;
+use log::Level;
 use ndarray::Array2;
 use std::cell::Cell;
 use std::fmt;
@@ -62,7 +62,7 @@ const TICKS_PER_SECOND: u32 = 50;
 const PLAYER_NAME_LENGTH: usize = 16 - 1; // -1 for null termination
 const MAPDOWNLOAD_CHUNK_SIZE: u64 = 1024 - 128;
 
-fn hexdump(level: LogLevel, data: &[u8]) {
+fn hexdump(level: Level, data: &[u8]) {
     if log_enabled!(level) {
         hexdump_iter(data).foreach(|s| log!(level, "{}", s));
     }
@@ -73,13 +73,17 @@ struct Warn<'a, T: fmt::Debug>(T, &'a [u8]);
 impl<'a, T: fmt::Debug, W: fmt::Debug> warn::Warn<W> for Warn<'a, T> {
     fn warn(&mut self, w: W) {
         warn!("{:?}: {:?}", self.0, w);
-        hexdump(LogLevel::Warn, self.1);
+        hexdump(Level::Warn, self.1);
     }
 }
 
 fn sends_impl<L: Loop + ?Sized>(msg: System, pid: PeerId, vital: bool, loop_: &mut L) {
-    let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
-    with_packer(&mut buf, |p| msg.encode(p).unwrap());
+    let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
+    buf.extend(std::iter::repeat(0u8).take(buf.capacity()));
+    let len = {
+        with_packer(buf.as_mut_slice(), |p| msg.encode(p).unwrap().len())
+    };
+    buf.truncate(len);
     loop_.send(Chunk {
         pid: pid,
         vital: vital,
@@ -96,8 +100,12 @@ trait LoopExt: Loop {
     }
     fn sendg<'a, G: Into<Game<'a>>>(&mut self, pid: PeerId, msg: G) {
         fn inner<L: Loop + ?Sized>(msg: Game, pid: PeerId, loop_: &mut L) {
-            let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
-            with_packer(&mut buf, |p| msg.encode(p).unwrap());
+            let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
+            buf.extend(std::iter::repeat(0u8).take(buf.capacity()));
+            let len = {
+                with_packer(buf.as_mut_slice(), |p| msg.encode(p).unwrap().len())
+            };
+            buf.truncate(len);
             loop_.send(Chunk {
                 pid: pid,
                 vital: true,
@@ -108,8 +116,12 @@ trait LoopExt: Loop {
     }
     fn sendc<'a, C: Into<Connless<'a>>>(&mut self, addr: Addr, msg: C) {
         fn inner<L: Loop + ?Sized>(msg: Connless, addr: Addr, loop_: &mut L) {
-            let mut buf: ArrayVec<[u8; 2048]> = ArrayVec::new();
-            with_packer(&mut buf, |p| msg.encode(p).unwrap());
+            let mut buf: ArrayVec<u8, 2048> = ArrayVec::new();
+            buf.extend(std::iter::repeat(0u8).take(buf.capacity()));
+            let len = {
+                with_packer(buf.as_mut_slice(), |p| msg.encode(p).unwrap().len())
+            };
+            buf.truncate(len);
             loop_.send_connless(addr, &buf)
         }
         inner(msg.into(), addr, self)
@@ -304,7 +316,7 @@ impl PeerState {
 
 #[derive(Clone)]
 struct SystemEnterGameState {
-    name: ArrayVec<[u8; PLAYER_NAME_LENGTH]>,
+    name: ArrayVec<u8, PLAYER_NAME_LENGTH>,
 }
 
 impl SystemEnterGameState {
@@ -317,7 +329,7 @@ impl SystemEnterGameState {
 }
 
 struct IngameState {
-    name: ArrayVec<[u8; PLAYER_NAME_LENGTH]>,
+    name: ArrayVec<u8, PLAYER_NAME_LENGTH>,
     snaps: libtw2_snapshot::Storage,
     spectator: bool,
     input: snap_obj::PlayerInput,
@@ -403,7 +415,7 @@ impl<'a, L: Loop> ServerLoop<'a, L> {
             Ok(m) => m,
             Err(err) => {
                 warn!("decode error {:?}:", err);
-                hexdump(LogLevel::Warn, data);
+                hexdump(Level::Warn, data);
                 return;
             }
         };
@@ -431,7 +443,7 @@ impl<'a, L: Loop> ServerLoop<'a, L> {
                         self.loop_.disconnect(pid, b"Wrong password");
                     }
                 } else {
-                    let mut buf: ArrayString<[u8; 128]> = ArrayString::new();
+                    let mut buf: ArrayString<128> = ArrayString::new();
                     write!(
                         &mut buf,
                         "Wrong version. Server is running '{}' and client '{}'",
@@ -534,7 +546,7 @@ impl<'a, L: Loop> ServerLoop<'a, L> {
                 }
                 ingame.spectator = join_spectators;
 
-                let mut msg: ArrayString<[u8; 64]> = ArrayString::new();
+                let mut msg: ArrayString<64> = ArrayString::new();
                 if ingame.spectator {
                     let idx = self
                         .server
@@ -581,7 +593,7 @@ impl<'a, L: Loop> ServerLoop<'a, L> {
             Ok(m) => m,
             Err(err) => {
                 warn!("decode error {:?}:", err);
-                hexdump(LogLevel::Warn, data);
+                hexdump(Level::Warn, data);
                 return;
             }
         };
@@ -589,20 +601,28 @@ impl<'a, L: Loop> ServerLoop<'a, L> {
         match msg {
             Connless::RequestInfo(request) => {
                 processed = true;
-                let mut clients_buf: ArrayVec<[u8; 1024]> = Default::default();
+                let mut clients_buf: ArrayVec<u8, 1024> = Default::default();
+                clients_buf.extend(std::iter::repeat(0u8).take(clients_buf.capacity()));
+                let mut total_len = 0usize;
                 for (_, peer) in &self.server.peers {
-                    with_packer(&mut clients_buf, |p| {
-                        connless::Client {
-                            name: peer.state.net_name(),
-                            clan: b"",
-                            country: -1,
-                            score: 0,
-                            is_player: peer.state.net_is_player(),
-                        }
-                        .encode(p)
-                        .unwrap()
-                    });
+                    let written = {
+                        let slice = &mut clients_buf.as_mut_slice()[total_len..];
+                        with_packer(slice, |p| {
+                            connless::Client {
+                                name: peer.state.net_name(),
+                                clan: b"",
+                                country: -1,
+                                score: 0,
+                                is_player: peer.state.net_is_player(),
+                            }
+                            .encode(p)
+                            .unwrap()
+                            .len()
+                        })
+                    };
+                    total_len += written;
                 }
+                clients_buf.truncate(total_len);
                 // TODO: Send clients. :)
                 self.loop_.sendc(
                     addr,

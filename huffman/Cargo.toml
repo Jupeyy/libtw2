@@ -7,7 +7,7 @@ edition = "2021"
 rust-version = "1.63.0"
 
 [dependencies]
-arrayvec = "0.5.2"
+arrayvec = "0.7.6"
 buffer = "0.1.9"
 itertools = ">=0.3.0,<0.5.0"
 libtw2-common = { path = "../common/" }
@@ -15,7 +15,7 @@ libtw2-common = { path = "../common/" }
 [dev-dependencies]
 bencher = "0.1.5"
 libtw2-huffman-reference = { path = "reference" }
-quickcheck = "0.4.1"
+quickcheck = "1.0.3"
 
 [[bench]]
 name = "compression"

@@ -7,7 +7,7 @@ rust-version = "1.63.0"
 
 [dependencies]
 buffer = "0.1.9"
-libc = "0.2.0"
+libc = "0.2.177"
 libtw2-common = { path = "../../common" }
 libtw2-huffman = { path = ".." }
 libtw2-huffman-reference-sys = { path = "sys" }

@@ -8,6 +8,6 @@ rust-version = "1.63.0"
 
 [dependencies]
 libtw2-gamenet-common = { path = "../common/" }
-serde = "1.0.23"
-serde_derive = "1.0.7"
-uuid = { version = "0.8.1", features = ["serde"] }
+serde = "1.0.228"
+serde_derive = "1.0.228"
+uuid = { version = "1.18.1", features = ["serde"] }
